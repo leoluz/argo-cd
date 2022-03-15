@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/argoproj/pkg/rand"
+	"github.com/sirupsen/logrus"
 
 	"github.com/argoproj/argo-cd/v2/util/buffered_context"
 	"github.com/argoproj/argo-cd/v2/util/cmp"
@@ -19,10 +20,23 @@ import (
 
 	"github.com/argoproj/gitops-engine/pkg/utils/kube"
 	"github.com/mattn/go-zglob"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/argoproj/argo-cd/v2/cmpserver/apiclient"
 )
+
+var log *logrus.Logger
+
+func init() {
+	log = logrus.New()
+	log.SetOutput(os.Stdout)
+	log.SetLevel(logrus.DebugLevel)
+
+	formatter := new(logrus.TextFormatter)
+	formatter.TimestampFormat = "2006-01-02T15:04:05.999999999Z07:00"
+	formatter.FullTimestamp = true
+	formatter.ForceColors = true
+	log.SetFormatter(formatter)
+}
 
 // cmpTimeoutBuffer is the amount of time before the request deadline to timeout server-side work. It makes sure there's
 // enough time before the client times out to send a meaningful error message.
@@ -57,11 +71,11 @@ func runCommand(ctx context.Context, command Command, path string, env []string)
 	if err != nil {
 		return "", err
 	}
-	logCtx := log.WithFields(log.Fields{"execID": execId})
+	logCtx := log.WithFields(logrus.Fields{"execID": execId})
 
 	// log in a way we can copy-and-paste into a terminal
 	args := strings.Join(cmd.Args, " ")
-	logCtx.WithFields(log.Fields{"dir": cmd.Dir}).Info(args)
+	logCtx.WithFields(logrus.Fields{"dir": cmd.Dir}).Info(args)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -89,7 +103,7 @@ func runCommand(ctx context.Context, command Command, path string, env []string)
 	duration := time.Since(start)
 	output := stdout.String()
 
-	logCtx.WithFields(log.Fields{"duration": duration}).Debug(output)
+	logCtx.WithFields(logrus.Fields{"duration": duration}).Debug(output)
 
 	if err != nil {
 		err := newCmdError(args, errors.New(err.Error()), strings.TrimSpace(stderr.String()))
@@ -226,6 +240,7 @@ func (s *Service) MatchRepository(stream apiclient.ConfigManagementPluginService
 		return fmt.Errorf("match repository error: %s", err)
 	}
 	repoResponse := &apiclient.RepositoryResponse{IsSupported: isSupported}
+	log.Debugf("repository isSupported: %t", isSupported)
 
 	err = stream.SendAndClose(repoResponse)
 	if err != nil {
@@ -239,6 +254,7 @@ func (s *Service) matchRepository(ctx context.Context, workdir string) (bool, er
 	if config.Spec.Discover.FileName != "" {
 		log.Debugf("config.Spec.Discover.FileName is provided")
 		pattern := filepath.Join(workdir, config.Spec.Discover.FileName)
+		log.Debugf("using pattern: %s", pattern)
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			e := fmt.Errorf("error finding filename match for pattern %q: %s", pattern, err)

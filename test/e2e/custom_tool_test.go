@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -199,38 +201,65 @@ func startCMPServer(configFile string) {
 	FailOnErr(RunWithStdin("", "", "../../dist/argocd", "--config-dir-path", configFile))
 }
 
+func startCMPServerCtx(ctx context.Context, configFile string) {
+	pluginSockFilePath := TmpDir + PluginSockFilePath
+	if _, err := os.Stat(pluginSockFilePath); os.IsNotExist(err) {
+		// path/to/whatever does not exist
+		err := os.Mkdir(pluginSockFilePath, 0700)
+		CheckError(err)
+	}
+	env := make(map[string]string)
+	env["ARGOCD_BINARY_NAME"] = "argocd-cmp-server"
+	// ARGOCD_PLUGINSOCKFILEPATH should be set as the same value as repo server env var
+	env["ARGOCD_PLUGINSOCKFILEPATH"] = pluginSockFilePath
+	args := []string{
+		"--config-dir-path",
+		configFile,
+	}
+
+	go RunProcess(ctx, "", "../../dist/argocd", env, args...)
+}
+
 //Discover by fileName
 func TestCMPDiscoverWithFileName(t *testing.T) {
 	pluginName := "cmp-fileName"
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	Given(t).
 		And(func() {
-			go startCMPServer("./testdata/cmp-fileName")
-			time.Sleep(1 * time.Second)
-			os.Setenv("ARGOCD_BINARY_NAME", "argocd")
+			fmt.Println("starting cmp-server......")
+			startCMPServerCtx(ctx, "./testdata/cmp-fileName")
 		}).
 		Path(pluginName).
 		When().
 		CreateApp().
 		Sync().
 		Then().
+		AndAction(func() {
+			cancel()
+		}).
 		Expect(OperationPhaseIs(OperationSucceeded)).
+		Expect(OperationPhaseIs(OperationFailed)).
 		Expect(SyncStatusIs(SyncStatusCodeSynced)).
 		Expect(HealthIs(health.HealthStatusHealthy))
 }
 
 //Discover by Find glob
 func TestCMPDiscoverWithFindGlob(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	Given(t).
 		And(func() {
-			go startCMPServer("./testdata/cmp-find-glob")
-			time.Sleep(1 * time.Second)
-			os.Setenv("ARGOCD_BINARY_NAME", "argocd")
+			go startCMPServerCtx(ctx, "./testdata/cmp-find-glob")
 		}).
 		Path("guestbook").
 		When().
 		CreateApp().
 		Sync().
 		Then().
+		AndAction(func() {
+			cancel()
+		}).
 		Expect(OperationPhaseIs(OperationSucceeded)).
 		Expect(SyncStatusIs(SyncStatusCodeSynced)).
 		Expect(HealthIs(health.HealthStatusHealthy))

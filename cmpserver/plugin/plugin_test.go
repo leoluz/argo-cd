@@ -66,7 +66,7 @@ func TestMatchRepository(t *testing.T) {
 	setup := func(t *testing.T, opts ...pluginOpt) *fixture {
 		t.Helper()
 		cic := buildPluginConfig(opts...)
-		path := filepath.Join(test.GetTestDir(t), "testdata", "kustomize")
+		path := filepath.Join(test.GetTestDir(t), "testdata")
 		s := NewService(*cic)
 		return &fixture{
 			service: s,
@@ -76,7 +76,7 @@ func TestMatchRepository(t *testing.T) {
 	t.Run("will match plugin by filename", func(t *testing.T) {
 		// given
 		d := Discover{
-			FileName: "kustomization.yaml",
+			FileName: "kustomize/kustomization.yaml",
 		}
 		f := setup(t, withDiscover(d))
 
