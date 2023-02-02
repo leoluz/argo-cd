@@ -468,16 +468,16 @@ func (m *Manager) authorize(ctx context.Context, rr *RequestResources, extName s
 // extension service. The request will be sanitized by removing sensitive headers.
 func (m *Manager) CallExtension(extName string, proxyByCluster map[string]*httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reqResources, err := ValidateHeaders(r)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid headers: %s", err), http.StatusBadRequest)
-			return
-		}
-		app, err := m.authorize(r.Context(), reqResources, extName)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Unauthorized extension request: %s", err), http.StatusUnauthorized)
-			return
-		}
+		// reqResources, err := ValidateHeaders(r)
+		// if err != nil {
+		// 	http.Error(w, fmt.Sprintf("Invalid headers: %s", err), http.StatusBadRequest)
+		// 	return
+		// }
+		// app, err := m.authorize(r.Context(), reqResources, extName)
+		// if err != nil {
+		// 	http.Error(w, fmt.Sprintf("Unauthorized extension request: %s", err), http.StatusUnauthorized)
+		// 	return
+		// }
 
 		sanitizeRequest(r, extName)
 
@@ -491,21 +491,21 @@ func (m *Manager) CallExtension(extName string, proxyByCluster map[string]*httpu
 				return
 			}
 		}
-		clusterName := app.Spec.Destination.Name
-		if clusterName == "" {
-			clusterName = app.Spec.Destination.Server
-		}
+		// clusterName := app.Spec.Destination.Name
+		// if clusterName == "" {
+		// 	clusterName = app.Spec.Destination.Server
+		// }
 
 		// This is the case where there are more than one proxy configured
 		// for this extension. In this case we need to get the proper proxy
 		// instance configured for the target cluster.
-		proxy, ok := proxyByCluster[clusterName]
-		if !ok {
-			msg := fmt.Sprintf("No extension configured for cluster %q", clusterName)
-			http.Error(w, msg, http.StatusBadRequest)
-			return
-		}
-		proxy.ServeHTTP(w, r)
+		// proxy, ok := proxyByCluster[clusterName]
+		// if !ok {
+		// 	msg := fmt.Sprintf("No extension configured for cluster %q", clusterName)
+		// 	http.Error(w, msg, http.StatusBadRequest)
+		// 	return
+		// }
+		// proxy.ServeHTTP(w, r)
 	}
 }
 
