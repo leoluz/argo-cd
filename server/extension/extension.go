@@ -485,6 +485,7 @@ func (m *Manager) CallExtension(extName string, proxyByCluster map[string]*httpu
 		// for this extension.
 		if len(proxyByCluster) == 1 {
 			for _, proxy := range proxyByCluster {
+				m.log.Infof("proxing request to %s", r.URL)
 				// in this case we just forward the request to the single
 				// proxy and return
 				proxy.ServeHTTP(w, r)
@@ -513,7 +514,7 @@ func (m *Manager) CallExtension(extName string, proxyByCluster map[string]*httpu
 // request, removing sensitive information before forwarding it to the
 // proxy extension.
 func sanitizeRequest(r *http.Request, extName string) {
-	r.URL.Path = strings.TrimPrefix(r.URL.String(), fmt.Sprintf("%s/%s", URLPrefix, extName))
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, fmt.Sprintf("%s/%s", URLPrefix, extName))
 	r.Header.Del("Cookie")
 	r.Header.Del("Authorization")
 }
